@@ -1,1 +1,792 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>YAM Cell Operations Tracker</title> <style> @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap'); :root { --bg: #f5f5f3; --surface: #ffffff; --border: rgba(0,0,0,0.08); --border-strong: rgba(0,0,0,0.15); --text: #1a1a1a; --text-muted: #6b6b6b; --text-faint: #a0a0a0; --green: #1a7a4a; --green-bg: #e8f5ee; --green-border: #a3d4b8; --amber: #8a5c00; --amber-bg: #fff3d6; --amber-border: #f0c96a; --red: #9a2020; --red-bg: #fdecea; --red-border: #f0a0a0; --blue: #1a4a8a; --blue-bg: #e8f0fd; --blue-border: #a3bef0; --accent: #2d5a8e; --radius: 10px; --radius-sm: 6px; } * { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 0; } .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; } .header-left { display: flex; align-items: center; gap: 12px; } .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: white; font-family: 'DM Mono', monospace; } .header h1 { font-size: 16px; font-weight: 600; color: var(--text); } .header p { font-size: 12px; color: var(--text-muted); margin-top: 1px; } .live-time { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text-muted); background: var(--bg); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); } .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; } .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; margin-bottom: 20px; } .tab { flex: 1; padding: 8px 16px; border-radius: 7px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; } .tab.active { background: var(--accent); color: white; } .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; } .card-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; } .roster-grid { display: flex; flex-wrap: wrap; gap: 6px; } .alias-chip { padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: 'DM Mono', monospace; } .alias-chip:hover { border-color: var(--accent); color: var(--accent); } .alias-chip.selected { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); } .alias-chip.punched-in { background: var(--green-bg); color: var(--green); border-color: var(--green-border); } .alias-chip.away { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); } .alias-chip.punched-out { background: var(--red-bg); color: var(--red); border-color: var(--red-border); } .status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; } .status-left { display: flex; align-items: center; gap: 10px; } .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); } .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; } .status-dot.green { background: var(--green); } .status-dot.amber { background: #f0a020; } .status-dot.red { background: var(--red); } .net-time { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; color: var(--text); } .punch-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; } .btn { padding: 11px; border-radius: var(--radius-sm); border: 1px solid; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; } .btn-in { background: var(--green-bg); color: var(--green); border-color: var(--green-border); } .btn-in:hover { background: #d0edd9; } .btn-out { background: var(--red-bg); color: var(--red); border-color: var(--red-border); } .btn-out:hover { background: #f8d8d8; } .interrupt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; } .icard { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; cursor: pointer; transition: all 0.15s; background: var(--surface); } .icard:hover { border-color: var(--amber-border); background: var(--amber-bg); } .icard.open { border-color: var(--amber-border); background: var(--amber-bg); } .icard-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; } .icard.open .icard-name { color: var(--amber); } .icard-policy { font-size: 11px; color: var(--text-faint); margin-bottom: 10px; } .icard-timer { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--amber); display: none; margin-bottom: 8px; } .icard.open .icard-timer { display: block; } .btn-return { display: none; width: 100%; padding: 7px; border-radius: var(--radius-sm); border: 1px solid var(--green-border); background: var(--green-bg); color: var(--green); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; } .icard.open .btn-return { display: block; } .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; } .metric { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; } .metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; } .metric-val { font-size: 20px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; } .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; } .metric-val.flag { color: var(--red); } .log-table { width: 100%; border-collapse: collapse; font-size: 13px; } .log-table th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); } .log-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; } .log-table tr:last-child td { border-bottom: none; } .policy-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); margin-left: 6px; } .mono { font-family: 'DM Mono', monospace; } .manager-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; } .member-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; } .member-alias { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; } .member-status { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; } .member-net { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--text); } .member-lost { font-size: 11px; color: var(--text-faint); margin-top: 2px; } .member-flags { font-size: 11px; color: var(--red); margin-top: 4px; font-weight: 600; } .sync-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); padding: 8px 14px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 16px; } .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; } .sync-dot.ok { background: var(--green); } .sync-dot.err { background: var(--red); } .sync-dot.syncing { background: #f0a020; animation: pulse 1s infinite; } @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} } .empty { font-size: 13px; color: var(--text-faint); padding: 20px 0; text-align: center; } .section-divider { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 20px 0 12px; } .impact-row-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); } .impact-row-item:last-child { border-bottom: none; } .impact-label { font-size: 13px; color: var(--text-muted); width: 110px; flex-shrink: 0; } .impact-bar-wrap { flex: 1; height: 7px; background: var(--bg); border-radius: 99px; overflow: hidden; } .impact-bar { height: 100%; border-radius: 99px; transition: width 0.4s; } .impact-val { font-size: 12px; font-weight: 600; color: var(--text); min-width: 60px; text-align: right; font-family: 'DM Mono', monospace; } @media (max-width: 600px) { .container { padding: 16px 12px; } .punch-row { grid-template-columns: 1fr; } .net-time { font-size: 22px; } } </style> </head> <body> <div class="header"> <div class="header-left"> <div class="logo">YAM</div> <div> <h1>Cell Operations Tracker</h1> <p>Frontier AI &amp; Robotics — FAR</p> </div> </div> <div class="live-time" id="headerClock">--:--:-- --</div> </div> <div class="container"> <div class="sync-status" id="syncStatus"> <span class="sync-dot" id="syncDot"></span> <span id="syncText">Connecting to SharePoint...</span> <button onclick="runDiagnostics()" style="margin-left:auto;padding:3px 10px;font-size:11px;font-family:'DM Sans',sans-serif;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);cursor:pointer;color:var(--text-muted);">Run Diagnostics</button> </div> <div id="diagPanel" style="display:none;background:#1a1a1a;color:#e0e0e0;font-family:'DM Mono',monospace;font-size:12px;border-radius:8px;padding:16px;margin-bottom:16px;white-space:pre-wrap;line-height:1.7;max-height:320px;overflow-y:auto;"></div> <div class="tabs"> <button class="tab active" onclick="setView('punch')">My Tracker</button> <button class="tab" onclick="setView('manager')">Manager Dashboard</button> </div> <div id="viewPunch"> <div class="card"> <div class="card-title">Select your alias</div> <div class="roster-grid" id="roster"></div> </div> <div id="trackerPanel" style="display:none;"> <div class="card"> <div class="status-row"> <div class="status-left"> <div> <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Active — <span id="activeAlias" style="font-family:'DM Mono',monospace;color:var(--text);font-weight:500;"></span></div> <div class="status-badge" id="statusBadge"> <span class="status-dot" id="statusDot"></span> <span id="statusText">Not started</span> </div> </div> </div> <div class="net-time" id="netTime">—</div> </div> <div class="punch-row"> <button class="btn btn-in" onclick="punchIn()">Punch in</button> <button class="btn btn-out" onclick="punchOut()">Punch out</button> </div> <div class="card-title">Log interruption</div> <div class="interrupt-grid"> <div class="icard" id="ic_bathroom" onclick="startInterrupt('bathroom')"> <div class="icard-name">Bathroom break</div> <div class="icard-policy">Flag if over 8 min</div> <div class="icard-timer" id="it_bathroom">0:00</div> <button class="btn-return" onclick="event.stopPropagation();endInterrupt('bathroom')">Return to cell</button> </div> <div class="icard" id="ic_car" onclick="startInterrupt('car')"> <div class="icard-name">Car move</div> <div class="icard-policy">Flag if over 20 min</div> <div class="icard-timer" id="it_car">0:00</div> <button class="btn-return" onclick="event.stopPropagation();endInterrupt('car')">Return to cell</button> </div> <div class="icard" id="ic_lunch" onclick="startInterrupt('lunch')"> <div class="icard-name">Lunch</div> <div class="icard-policy">Flag if over 60 min</div> <div class="icard-timer" id="it_lunch">0:00</div> <button class="btn-return" onclick="event.stopPropagation();endInterrupt('lunch')">Return to cell</button> </div> <div class="icard" id="ic_break" onclick="startInterrupt('break')"> <div class="icard-name">Break</div> <div class="icard-policy">Flag if over 5 min</div> <div class="icard-timer" id="it_break">0:00</div> <button class="btn-return" onclick="event.stopPropagation();endInterrupt('break')">Return to cell</button> </div> </div> <div class="metrics-grid"> <div class="metric"><div class="metric-label">Net cell time</div><div class="metric-val" id="mNet">—</div><div class="metric-sub">after interruptions</div></div> <div class="metric"><div class="metric-label">Time lost</div><div class="metric-val" id="mLost">—</div><div class="metric-sub">min off cell</div></div> <div class="metric"><div class="metric-label">Interruptions</div><div class="metric-val" id="mCount">—</div><div class="metric-sub">today</div></div> <div class="metric"><div class="metric-label">Policy flags</div><div class="metric-val flag" id="mFlags">—</div><div class="metric-sub">over threshold</div></div> </div> </div> <div class="card"> <div class="card-title">Today's event log</div> <div style="overflow-x:auto;"> <table class="log-table"> <thead><tr><th>Event</th><th>Start</th><th>End</th><th>Duration</th><th>Flag</th></tr></thead> <tbody id="logBody"><tr><td colspan="5" class="empty">No events yet</td></tr></tbody> </table> </div> </div> </div> </div> <div id="viewManager" style="display:none;"> <div class="card"> <div class="card-title">Team overview — live</div> <div class="manager-grid" id="managerGrid"><div class="empty">Loading...</div></div> </div> <div class="card"> <div class="card-title">Impact analysis — all members today</div> <div id="impactRows"><div class="empty">No data yet</div></div> </div> <div class="card"> <div class="card-title">Full event log — all members</div> <div style="overflow-x:auto;"> <table class="log-table"> <thead><tr><th>Alias</th><th>Event</th><th>Start</th><th>End</th><th>Duration</th><th>Flag</th></tr></thead> <tbody id="managerLogBody"><tr><td colspan="6" class="empty">No events yet</td></tr></tbody> </table> </div> </div> </div> </div> <script> const SP_SITE = 'https://amazon.sharepoint.com/sites/far-team'; const SP_LIST = 'YAM CELL OPERATIONS'; const SP_API = `${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')/items`; const HEADERS_GET = { 'Accept': 'application/json;odata=verbose' }; let spListItemType = null; // fetched dynamically on connect const POLICY = { bathroom:8, car:20, lunch:60, break:5 }; const LABELS = { bathroom:'Bathroom break', car:'Car move', lunch:'Lunch', break:'Break' }; const COLORS = { bathroom:'#378ADD', car:'#EF9F27', lunch:'#1D9E75', break:'#D85A30' }; const ROSTER = [ 'baltaeth','wlavajos','alanyho','florapli','kylekwon','edgrande','bremandr', 'ramarcif','llathamc','msoebrot','gspector','kyriwnel','frequinc','dannifis', 'laquonpa','togivama','keysking','benjennm','failucca', 'sangwoo','tracycor','aarushis','rathinap','rashilar','juliancr','aaliyah' ]; let cur = null; let punchInTime = null; let openInterrupts = {}; let interruptTimers = {}; let localEvents = []; let liveInterval = null; let syncInterval = null; let allItems = []; let spToken = null; let spTokenTime = 0; let connected = false; function fmtTime(ms) { const m = Math.round(ms/60000); return m < 60 ? m+'m' : Math.floor(m/60)+'h '+(m%60)+'m'; } function fmtSec(ms) { const s = Math.floor(ms/1000); const m = Math.floor(s/60); return m+':'+(s%60).toString().padStart(2,'0'); } function fmtMin(ms) { return Math.round(ms/60000)+'m'; } function nowStr() { return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); } function todayStr() { return new Date().toISOString().slice(0,10); } async function getToken() { try { const r = await fetch(`${SP_SITE}/_api/contextinfo`, { method: 'POST', headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }); if (!r.ok) return null; const d = await r.json(); return d.d.GetContextWebInformation.FormDigestValue; } catch(e) { return null; } } async function spGet() { try { const today = new Date(); today.setHours(0,0,0,0); const filter = `$filter=Created ge datetime'${today.toISOString()}'&$orderby=Created desc&$top=500`; const r = await fetch(`${SP_API}?${filter}`, { headers: HEADERS_GET, credentials: 'include' }); if (!r.ok) return null; const d = await r.json(); // Normalize: SharePoint returns 'Alias', internal code uses 'ALIAS' return d.d.results.map(item => ({ ...item, ALIAS: item.Alias || item.ALIAS || '' })); } catch(e) { return null; } } async function getListItemType() { try { const r = await fetch(`${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')?$select=ListItemEntityTypeFullName`, { headers: HEADERS_GET, credentials: 'include' }); if (!r.ok) return null; const d = await r.json(); return d.d.ListItemEntityTypeFullName; } catch(e) { return null; } } async function spPost(item) { // Refresh token if missing or older than 25 min if (!spToken || (Date.now() - spTokenTime > 25 * 60 * 1000)) { spToken = await getToken(); spTokenTime = Date.now(); } if (!spToken) return false; if (!spListItemType) spListItemType = await getListItemType(); const listType = spListItemType || 'SP.Data.YAMCELLOPERATIONSListItem'; try { const r = await fetch(SP_API, { method: 'POST', headers: { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose', 'X-RequestDigest': spToken, }, credentials: 'include', body: JSON.stringify({ __metadata: { type: listType }, Title: `${item.alias}_${item.EventType}_${Date.now()}`, Alias: item.alias, EventType: item.EventType, StartTime: item.StartTime, EndTime: item.EndTime || null, DurationMin: item.DurationMin || 0, PolicyFlag: item.PolicyFlag || false }) }); if (r.status === 403) { spToken = await getToken(); spTokenTime = Date.now(); } return r.ok; } catch(e) { return false; } } async function runDiagnostics() { const panel = document.getElementById('diagPanel'); panel.style.display = 'block'; const log = (msg, color) => { const span = document.createElement('span'); span.style.color = color || '#e0e0e0'; span.textContent = msg + '\n'; panel.appendChild(span); panel.scrollTop = panel.scrollHeight; }; panel.innerHTML = ''; log('=== YAM Cell Tracker Diagnostics ===', '#7ec8e3'); log(`Time: ${new Date().toLocaleTimeString()}`); log(`Origin: ${location.origin}`); log(`Href: ${location.href.slice(0,80)}...`); log(''); // Test 1: contextinfo log('--- Test 1: GET contextinfo token ---', '#f0c96a'); try { const r = await fetch(`${SP_SITE}/_api/contextinfo`, { method: 'POST', headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }); log(` Status: ${r.status} ${r.statusText}`, r.ok ? '#7ed87e' : '#f08080'); if (r.ok) { const d = await r.json(); const token = d?.d?.GetContextWebInformation?.FormDigestValue; log(` Token: ${token ? token.slice(0,40)+'...' : 'NOT FOUND'}`, token ? '#7ed87e' : '#f08080'); } else { const txt = await r.text(); log(` Response: ${txt.slice(0,200)}`, '#f08080'); } } catch(e) { log(` ERROR: ${e.message}`, '#f08080'); } // Test 2: List exists log(''); log('--- Test 2: GET list metadata ---', '#f0c96a'); try { const r = await fetch(`${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')?$select=Title,ListItemEntityTypeFullName`, { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }); log(` Status: ${r.status} ${r.statusText}`, r.ok ? '#7ed87e' : '#f08080'); if (r.ok) { const d = await r.json(); log(` Title: ${d?.d?.Title}`, '#7ed87e'); log(` ItemType: ${d?.d?.ListItemEntityTypeFullName}`, '#7ed87e'); } else { const txt = await r.text(); log(` Response: ${txt.slice(0,300)}`, '#f08080'); } } catch(e) { log(` ERROR: ${e.message}`, '#f08080'); } // Test 3: Read list items log(''); log('--- Test 3: GET list items (top 3) ---', '#f0c96a'); try { const r = await fetch(`${SP_API}?$top=3`, { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }); log(` Status: ${r.status} ${r.statusText}`, r.ok ? '#7ed87e' : '#f08080'); if (r.ok) { const d = await r.json(); const items = d?.d?.results || []; log(` Items returned: ${items.length}`, '#7ed87e'); if (items[0]) log(` First item keys: ${Object.keys(items[0]).filter(k=>!k.startsWith('odata')).join(', ')}`, '#7ed87e'); } else { const txt = await r.text(); log(` Response: ${txt.slice(0,300)}`, '#f08080'); } } catch(e) { log(` ERROR: ${e.message}`, '#f08080'); } log(''); log('=== Done ===', '#7ec8e3'); } setSyncStatus('syncing', 'Connecting to SharePoint...'); spToken = await getToken(); spTokenTime = Date.now(); if (spToken) { spListItemType = await getListItemType(); connected = true; setSyncStatus('ok', `Connected to SharePoint — data syncing live`); await refreshData(); syncInterval = setInterval(refreshData, 15000); } else { connected = false; setSyncStatus('err', 'Not connected — make sure you are logged into Amazon SharePoint in this browser.'); } } async function refreshData() { const items = await spGet(); if (items) { allItems = items; renderManagerGrid(); renderManagerLog(); renderImpact(); updateRosterChips(); } } function setSyncStatus(state, text) { const dot = document.getElementById('syncDot'); const txt = document.getElementById('syncText'); dot.className = 'sync-dot ' + state; txt.textContent = text; } function setView(v) { document.getElementById('viewPunch').style.display = v==='punch'?'block':'none'; document.getElementById('viewManager').style.display = v==='manager'?'block':'none'; document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&v==='punch')||(i===1&&v==='manager'))); if (v==='manager') { renderManagerGrid(); renderManagerLog(); renderImpact(); } } function renderRoster() { const el = document.getElementById('roster'); el.innerHTML = ROSTER.map(a => { const status = getMemberStatus(a); return `<span class="alias-chip ${status}${cur===a?' selected':''}" onclick="selectAlias('${a}')">${a}</span>`; }).join(''); } function getMemberStatus(alias) { const today = todayStr(); const events = allItems.filter(i => i.ALIAS === alias); const lastIn = events.find(i => i.EventType === 'punch-in'); const lastOut = events.find(i => i.EventType === 'punch-out'); const hasInterrupt = events.find(i => !['punch-in','punch-out'].includes(i.EventType) && !i.EndTime); if (!lastIn) return ''; if (lastOut) return 'punched-out'; if (hasInterrupt) return 'away'; return 'punched-in'; } function updateRosterChips() { document.querySelectorAll('.alias-chip').forEach(chip => { const a = chip.textContent.trim(); const status = getMemberStatus(a); chip.className = `alias-chip ${status}${cur===a?' selected':''}`; }); } function selectAlias(alias) { cur = alias; document.getElementById('activeAlias').textContent = alias; document.getElementById('trackerPanel').style.display = 'block'; localEvents = allItems.filter(i => i.ALIAS === alias); checkExistingSession(); renderLocalLog(); renderLocalMetrics(); renderRoster(); } function checkExistingSession() { const inEv = allItems.find(i => i.ALIAS === cur && i.EventType === 'punch-in'); const outEv = allItems.find(i => i.ALIAS === cur && i.EventType === 'punch-out'); if (inEv && !outEv) { punchInTime = new Date(inEv.StartTime).getTime(); setStatus('On cell', 'green'); startLiveClock(); } else if (outEv) { setStatus('Punched out', 'red'); } else { setStatus('Not started', ''); } } function setStatus(text, dot) { document.getElementById('statusText').textContent = text; document.getElementById('statusDot').className = 'status-dot ' + dot; } async function punchIn() { if (!cur) return; if (punchInTime) { alert('Already punched in!'); return; } punchInTime = Date.now(); const item = { alias: cur, EventType: 'punch-in', StartTime: new Date().toISOString() }; setStatus('On cell', 'green'); startLiveClock(); const ok = await spPost(item); setSyncStatus(ok?'ok':'err', ok?'Punch-in saved to SharePoint':'Failed to save — check connection'); await refreshData(); renderLocalLog(); } async function punchOut() { if (!cur || !punchInTime) return; Object.keys(openInterrupts).forEach(k => endInterrupt(k)); punchInTime = null; if (liveInterval) clearInterval(liveInterval); document.getElementById('netTime').textContent = '—'; const item = { alias: cur, EventType: 'punch-out', StartTime: new Date().toISOString() }; setStatus('Punched out', 'red'); const ok = await spPost(item); setSyncStatus(ok?'ok':'err', ok?'Punch-out saved to SharePoint':'Failed to save — check connection'); await refreshData(); renderLocalLog(); renderLocalMetrics(); } function startInterrupt(type) { if (openInterrupts[type]) return; if (!punchInTime) { alert('Punch in first!'); return; } openInterrupts[type] = Date.now(); document.getElementById('ic_'+type).classList.add('open'); setStatus(LABELS[type], 'amber'); interruptTimers[type] = setInterval(() => { const el = document.getElementById('it_'+type); if (el) el.textContent = fmtSec(Date.now() - openInterrupts[type]); }, 1000); } async function endInterrupt(type) { if (!openInterrupts[type]) return; const startEpoch = openInterrupts[type]; const endEpoch = Date.now(); const durMs = endEpoch - startEpoch; const durMin = Math.round(durMs/60000); const overPolicy = durMin > POLICY[type]; clearInterval(interruptTimers[type]); delete openInterrupts[type]; delete interruptTimers[type]; document.getElementById('ic_'+type).classList.remove('open'); document.getElementById('it_'+type).textContent = '0:00'; if (!Object.keys(openInterrupts).length) setStatus('On cell', 'green'); const item = { alias: cur, EventType: LABELS[type], StartTime: new Date(startEpoch).toISOString(), EndTime: new Date(endEpoch).toISOString(), DurationMin: durMin, PolicyFlag: overPolicy }; const ok = await spPost(item); setSyncStatus(ok?'ok':'err', ok?`${LABELS[type]} saved (${durMin}m)${overPolicy?' — POLICY FLAG':''}` : 'Failed to save'); await refreshData(); renderLocalLog(); renderLocalMetrics(); } function startLiveClock() { if (liveInterval) clearInterval(liveInterval); liveInterval = setInterval(() => { if (!punchInTime) return; const openMs = Object.values(openInterrupts).reduce((a,s)=>a+(Date.now()-s),0); const lostMs = allItems .filter(i => i.ALIAS === cur && i.DurationMin > 0) .reduce((a,i) => a + (i.DurationMin*60000), 0); const gross = Date.now() - punchInTime; const net = Math.max(0, gross - lostMs - openMs); document.getElementById('netTime').textContent = fmtTime(net); renderLocalMetrics(); }, 1000); } function renderLocalMetrics() { if (!cur) return; const myItems = allItems.filter(i => i.ALIAS === cur); const lostMs = myItems.filter(i=>i.DurationMin>0).reduce((a,i)=>a+(i.DurationMin*60000),0); const count = myItems.filter(i=>!['punch-in','punch-out'].includes(i.EventType)).length; const flags = myItems.filter(i=>i.PolicyFlag).length; const openMs = Object.values(openInterrupts).reduce((a,s)=>a+(Date.now()-s),0); const gross = punchInTime ? Date.now() - punchInTime : 0; const net = Math.max(0, gross - lostMs - openMs); document.getElementById('mNet').textContent = gross > 0 ? fmtTime(net) : '—'; document.getElementById('mLost').textContent = lostMs > 0 ? fmtMin(lostMs) : '—'; document.getElementById('mCount').textContent = count || '—'; document.getElementById('mFlags').textContent = flags || '—'; } function renderLocalLog() { const tbody = document.getElementById('logBody'); const myItems = [...allItems.filter(i => i.ALIAS === cur)]; if (!myItems.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No events yet</td></tr>'; return; } tbody.innerHTML = myItems.map(i => { const st = i.StartTime ? new Date(i.StartTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'; const et = i.EndTime ? new Date(i.EndTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'; const flag = i.PolicyFlag ? '<span class="policy-badge">POLICY</span>' : ''; const dur = i.DurationMin > 0 ? `<span class="mono">${i.DurationMin}m</span>` : '—'; return `<tr><td>${i.EventType}${flag}</td><td class="mono">${st}</td><td class="mono">${et}</td><td>${dur}</td><td>${i.PolicyFlag?'🚩':''}</td></tr>`; }).join(''); } function renderManagerGrid() { const el = document.getElementById('managerGrid'); el.innerHTML = ROSTER.map(a => { const items = allItems.filter(i => i.ALIAS === a); const lostMs = items.filter(i=>i.DurationMin>0).reduce((a,i)=>a+(i.DurationMin*60000),0); const flags = items.filter(i=>i.PolicyFlag).length; const inEv = items.find(i=>i.EventType==='punch-in'); const outEv = items.find(i=>i.EventType==='punch-out'); const interrupt = items.find(i=>!['punch-in','punch-out'].includes(i.EventType)&&!i.EndTime); let statusText = 'Not started'; let dotCls = ''; if (inEv && !outEv && !interrupt) { statusText='On cell'; dotCls='green'; } else if (interrupt) { statusText=interrupt.EventType; dotCls='amber'; } else if (outEv) { statusText='Punched out'; dotCls='red'; } const gross = inEv && !outEv ? Date.now()-new Date(inEv.StartTime).getTime() : 0; const net = Math.max(0, gross - lostMs); return `<div class="member-card"> <div class="member-alias">${a}</div> <div class="member-status"><span class="status-dot ${dotCls}"></span>${statusText}</div> <div class="member-net">${gross>0?fmtTime(net):'—'}</div> <div class="member-lost">${lostMs>0?fmtMin(lostMs)+' lost':''}</div> ${flags>0?`<div class="member-flags">${flags} policy flag${flags>1?'s':''}</div>`:''} </div>`; }).join(''); } function renderManagerLog() { const tbody = document.getElementById('managerLogBody'); if (!allItems.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No events today</td></tr>'; return; } tbody.innerHTML = [...allItems].slice(0,100).map(i => { const st = i.StartTime ? new Date(i.StartTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'; const et = i.EndTime ? new Date(i.EndTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—'; const flag = i.PolicyFlag ? '<span class="policy-badge">POLICY</span>' : ''; const dur = i.DurationMin > 0 ? `<span class="mono">${i.DurationMin}m</span>` : '—'; return `<tr><td class="mono">${i.ALIAS}</td><td>${i.EventType}${flag}</td><td class="mono">${st}</td><td class="mono">${et}</td><td>${dur}</td><td>${i.PolicyFlag?'🚩':''}</td></tr>`; }).join(''); } function renderImpact() { const totals = { bathroom:0, car:0, lunch:0, break:0 }; const counts = { bathroom:0, car:0, lunch:0, break:0 }; allItems.forEach(i => { const key = Object.keys(LABELS).find(k => LABELS[k]===i.EventType); if (key && i.DurationMin > 0) { totals[key] += i.DurationMin; counts[key]++; } }); const grand = Object.values(totals).reduce((a,v)=>a+v,0); const el = document.getElementById('impactRows'); if (!grand) { el.innerHTML = '<div class="empty">No interruption data yet</div>'; return; } const max = Math.max(...Object.values(totals)); el.innerHTML = Object.keys(totals).map(k => { const pct = max > 0 ? Math.round((totals[k]/max)*100) : 0; return `<div class="impact-row-item"> <span class="impact-label">${LABELS[k]}</span> <div class="impact-bar-wrap"><div class="impact-bar" style="width:${pct}%;background:${COLORS[k]};"></div></div> <span class="impact-val">${totals[k]}m · ${counts[k]}x</span> </div>`; }).join(''); } setInterval(() => { document.getElementById('headerClock').textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }, 1000); renderRoster(); initConnection(); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YAM Cell Operations Tracker</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --text-faint: #a0a0a0;
+    --green: #1a7a4a;
+    --green-bg: #e8f5ee;
+    --green-border: #a3d4b8;
+    --amber: #8a5c00;
+    --amber-bg: #fff3d6;
+    --amber-border: #f0c96a;
+    --red: #9a2020;
+    --red-bg: #fdecea;
+    --red-border: #f0a0a0;
+    --blue: #1a4a8a;
+    --blue-bg: #e8f0fd;
+    --blue-border: #a3bef0;
+    --accent: #2d5a8e;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 12px; }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: white;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .header h1 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .header p { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  .live-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1; padding: 8px 16px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+
+  .roster-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .alias-chip {
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .alias-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .alias-chip.selected { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
+  .alias-chip.punched-in { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+  .alias-chip.away { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+  .alias-chip.punched-out { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+
+  .status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+
+  .status-left { display: flex; align-items: center; gap: 10px; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 99px;
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-muted);
+  }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
+  .status-dot.green { background: var(--green); }
+  .status-dot.amber { background: #f0a020; }
+  .status-dot.red { background: var(--red); }
+
+  .net-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px; font-weight: 500;
+    color: var(--text);
+  }
+
+  .punch-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+
+  .btn {
+    padding: 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-in {
+    background: var(--green-bg); color: var(--green);
+    border-color: var(--green-border);
+  }
+  .btn-in:hover { background: #d0edd9; }
+
+  .btn-out {
+    background: var(--red-bg); color: var(--red);
+    border-color: var(--red-border);
+  }
+  .btn-out:hover { background: #f8d8d8; }
+
+  .interrupt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .icard {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+  }
+
+  .icard:hover { border-color: var(--amber-border); background: var(--amber-bg); }
+  .icard.open { border-color: var(--amber-border); background: var(--amber-bg); }
+
+  .icard-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .icard.open .icard-name { color: var(--amber); }
+  .icard-policy { font-size: 11px; color: var(--text-faint); margin-bottom: 10px; }
+  .icard-timer { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--amber); display: none; margin-bottom: 8px; }
+  .icard.open .icard-timer { display: block; }
+
+  .btn-return {
+    display: none; width: 100%; padding: 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--green-border);
+    background: var(--green-bg); color: var(--green);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .icard.open .btn-return { display: block; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+
+  .metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .metric-val { font-size: 20px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+  .metric-val.flag { color: var(--red); }
+
+  .log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .log-table th {
+    text-align: left; padding: 8px 10px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .log-table tr:last-child td { border-bottom: none; }
+
+  .policy-badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 99px;
+    background: var(--red-bg); color: var(--red);
+    border: 1px solid var(--red-border);
+    margin-left: 6px;
+  }
+
+  .mono { font-family: 'DM Mono', monospace; }
+
+  .manager-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .member-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+
+  .member-alias { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  .member-status { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+  .member-net { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--text); }
+  .member-lost { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+  .member-flags { font-size: 11px; color: var(--red); margin-top: 4px; font-weight: 600; }
+
+  .sync-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    padding: 8px 14px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.err { background: var(--red); }
+  .sync-dot.syncing { background: #f0a020; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .empty { font-size: 13px; color: var(--text-faint); padding: 20px 0; text-align: center; }
+
+  .section-divider {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 20px 0 12px;
+  }
+
+  .impact-row-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .impact-row-item:last-child { border-bottom: none; }
+  .impact-label { font-size: 13px; color: var(--text-muted); width: 110px; flex-shrink: 0; }
+  .impact-bar-wrap { flex: 1; height: 7px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .impact-bar { height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .impact-val { font-size: 12px; font-weight: 600; color: var(--text); min-width: 60px; text-align: right; font-family: 'DM Mono', monospace; }
+
+  @media (max-width: 600px) {
+    .container { padding: 16px 12px; }
+    .punch-row { grid-template-columns: 1fr; }
+    .net-time { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">YAM</div>
+    <div>
+      <h1>Cell Operations Tracker</h1>
+      <p>Frontier AI &amp; Robotics — FAR</p>
+    </div>
+  </div>
+  <div class="live-time" id="headerClock">--:--:-- --</div>
+</div>
+
+<div class="container">
+  <div class="sync-status" id="syncStatus">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="syncText">Connecting to SharePoint...</span>
+    
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setView('punch')">My Tracker</button>
+    <button class="tab" onclick="setView('manager')">Manager Dashboard</button>
+  </div>
+
+  <div id="viewPunch">
+    <div class="card">
+      <div class="card-title">Select your alias</div>
+      <div class="roster-grid" id="roster"></div>
+    </div>
+
+    <div id="trackerPanel" style="display:none;">
+      <div class="card">
+        <div class="status-row">
+          <div class="status-left">
+            <div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Active — <span id="activeAlias" style="font-family:'DM Mono',monospace;color:var(--text);font-weight:500;"></span></div>
+              <div class="status-badge" id="statusBadge">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Not started</span>
+              </div>
+            </div>
+          </div>
+          <div class="net-time" id="netTime">—</div>
+        </div>
+
+        <div class="punch-row">
+          <button class="btn btn-in" onclick="punchIn()">Punch in</button>
+          <button class="btn btn-out" onclick="punchOut()">Punch out</button>
+        </div>
+
+        <div class="card-title">Log interruption</div>
+        <div class="interrupt-grid">
+          <div class="icard" id="ic_bathroom" onclick="startInterrupt('bathroom')">
+            <div class="icard-name">Bathroom break</div>
+            <div class="icard-policy">Flag if over 8 min</div>
+            <div class="icard-timer" id="it_bathroom">0:00</div>
+            <button class="btn-return" onclick="event.stopPropagation();endInterrupt('bathroom')">Return to cell</button>
+          </div>
+          <div class="icard" id="ic_car" onclick="startInterrupt('car')">
+            <div class="icard-name">Car move</div>
+            <div class="icard-policy">Flag if over 20 min</div>
+            <div class="icard-timer" id="it_car">0:00</div>
+            <button class="btn-return" onclick="event.stopPropagation();endInterrupt('car')">Return to cell</button>
+          </div>
+          <div class="icard" id="ic_lunch" onclick="startInterrupt('lunch')">
+            <div class="icard-name">Lunch</div>
+            <div class="icard-policy">Flag if over 60 min</div>
+            <div class="icard-timer" id="it_lunch">0:00</div>
+            <button class="btn-return" onclick="event.stopPropagation();endInterrupt('lunch')">Return to cell</button>
+          </div>
+          <div class="icard" id="ic_break" onclick="startInterrupt('break')">
+            <div class="icard-name">Break</div>
+            <div class="icard-policy">Flag if over 5 min</div>
+            <div class="icard-timer" id="it_break">0:00</div>
+            <button class="btn-return" onclick="event.stopPropagation();endInterrupt('break')">Return to cell</button>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric"><div class="metric-label">Net cell time</div><div class="metric-val" id="mNet">—</div><div class="metric-sub">after interruptions</div></div>
+          <div class="metric"><div class="metric-label">Time lost</div><div class="metric-val" id="mLost">—</div><div class="metric-sub">min off cell</div></div>
+          <div class="metric"><div class="metric-label">Interruptions</div><div class="metric-val" id="mCount">—</div><div class="metric-sub">today</div></div>
+          <div class="metric"><div class="metric-label">Policy flags</div><div class="metric-val flag" id="mFlags">—</div><div class="metric-sub">over threshold</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Today's event log</div>
+        <div style="overflow-x:auto;">
+          <table class="log-table">
+            <thead><tr><th>Event</th><th>Start</th><th>End</th><th>Duration</th><th>Flag</th></tr></thead>
+            <tbody id="logBody"><tr><td colspan="5" class="empty">No events yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewManager" style="display:none;">
+    <div class="card">
+      <div class="card-title">Team overview — live</div>
+      <div class="manager-grid" id="managerGrid"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Impact analysis — all members today</div>
+      <div id="impactRows"><div class="empty">No data yet</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Full event log — all members</div>
+      <div style="overflow-x:auto;">
+        <table class="log-table">
+          <thead><tr><th>Alias</th><th>Event</th><th>Start</th><th>End</th><th>Duration</th><th>Flag</th></tr></thead>
+          <tbody id="managerLogBody"><tr><td colspan="6" class="empty">No events yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ── CONFIG: replace CLIENT_ID with your Azure App Registration ID ────────────
+const CLIENT_ID = '9bc3ab49-b65d-410a-85ad-de819febfddc';
+const SP_SITE   = 'https://amazon.sharepoint.com/sites/far-team';
+const SP_LIST   = 'YAM CELL OPERATIONS';
+const SP_API    = `${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')/items`;
+
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: 'https://login.microsoftonline.com/common',
+    redirectUri: window.location.href.split('?')[0].split('#')[0]
+  },
+  cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: true }
+};
+const msalApp = new msal.PublicClientApplication(msalConfig);
+const SP_SCOPES = ['https://amazon.sharepoint.com/AllSites.Read', 'https://amazon.sharepoint.com/AllSites.Write'];
+
+let msalAccount  = null;
+let accessToken  = null;
+let spListItemType = null;
+
+async function getAccessToken() {
+  const accounts = msalApp.getAllAccounts();
+  const req = { scopes: SP_SCOPES, account: accounts[0] || undefined };
+  try {
+    const r = await msalApp.acquireTokenSilent(req);
+    msalAccount = r.account;
+    return r.accessToken;
+  } catch(e) {
+    try {
+      const r = await msalApp.acquireTokenPopup(req);
+      msalAccount = r.account;
+      return r.accessToken;
+    } catch(e2) { return null; }
+  }
+}
+
+function ah(token, extra={}) {
+  return { 'Accept':'application/json;odata=verbose', 'Authorization':`Bearer ${token}`, ...extra };
+}
+
+async function getListItemType(token) {
+  try {
+    const r = await fetch(`${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')?$select=ListItemEntityTypeFullName`, { headers: ah(token) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.d.ListItemEntityTypeFullName;
+  } catch(e) { return null; }
+}
+
+async function spGet() {
+  const token = await getAccessToken();
+  if (!token) return null;
+  try {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const filter = `$filter=Created ge datetime'${today.toISOString()}'&$orderby=Created desc&$top=500`;
+    const r = await fetch(`${SP_API}?${filter}`, { headers: ah(token) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.d.results.map(i => ({ ...i, ALIAS: i.Alias || i.ALIAS || '' }));
+  } catch(e) { return null; }
+}
+
+async function spPost(item) {
+  const token = await getAccessToken();
+  if (!token) return false;
+  if (!spListItemType) spListItemType = await getListItemType(token);
+  const listType = spListItemType || 'SP.Data.YAMCELLOPERATIONSListItem';
+  try {
+    const r = await fetch(SP_API, {
+      method: 'POST',
+      headers: ah(token, { 'Content-Type':'application/json;odata=verbose' }),
+      body: JSON.stringify({
+        __metadata: { type: listType },
+        Title: `${item.alias}_${item.EventType}_${Date.now()}`,
+        Alias: item.alias,
+        EventType: item.EventType,
+        StartTime: item.StartTime,
+        EndTime: item.EndTime || null,
+        DurationMin: item.DurationMin || 0,
+        PolicyFlag: item.PolicyFlag || false
+      })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function initConnection() {
+  setSyncStatus('syncing', 'Signing in with Microsoft...');
+  await msalApp.handleRedirectPromise().catch(()=>{});
+  accessToken = await getAccessToken();
+  if (accessToken) {
+    spListItemType = await getListItemType(accessToken);
+    const name = msalAccount?.name || msalAccount?.username || '';
+    setSyncStatus('ok', `Connected${name ? ' as '+name : ''} — syncing live`);
+    await refreshData();
+    setInterval(refreshData, 15000);
+  } else {
+    setSyncStatus('err', 'Sign-in failed. Refresh the page to try again.');
+  }
+}
+
+const POLICY = { bathroom:8, car:20, lunch:60, break:5 };
+const LABELS  = { bathroom:'Bathroom break', car:'Car move', lunch:'Lunch', break:'Break' };
+const COLORS  = { bathroom:'#378ADD', car:'#EF9F27', lunch:'#1D9E75', break:'#D85A30' };
+
+const ROSTER = [
+  'baltaeth','wlavajos','alanyho','florapli','kylekwon','edgrande','bremandr',
+  'ramarcif','llathamc','msoebrot','gspector','kyriwnel','frequinc','dannifis',
+  'laquonpa','togivama','keysking','benjennm','failucca',
+  'sangwoo','tracycor','aarushis','rathinap','rashilar','juliancr','aaliyah'
+];
+
+let cur=null, punchInTime=null, openInterrupts={}, interruptTimers={};
+let localEvents=[], liveInterval=null, allItems=[];
+
+function fmtTime(ms){const m=Math.round(ms/60000);return m<60?m+'m':Math.floor(m/60)+'h '+(m%60)+'m';}
+function fmtSec(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60);return m+':'+(s%60).toString().padStart(2,'0');}
+function fmtMin(ms){return Math.round(ms/60000)+'m';}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+
+async function refreshData() {
+  const items = await spGet();
+  if (items) {
+    allItems = items;
+    renderManagerGrid(); renderManagerLog(); renderImpact(); updateRosterChips();
+    if (cur) { renderLocalLog(); renderLocalMetrics(); }
+  }
+}
+
+function setSyncStatus(state, text) {
+  document.getElementById('syncDot').className = 'sync-dot ' + state;
+  document.getElementById('syncText').textContent = text;
+}
+
+function setView(v) {
+  document.getElementById('viewPunch').style.display   = v==='punch'  ?'block':'none';
+  document.getElementById('viewManager').style.display = v==='manager'?'block':'none';
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',(i===0&&v==='punch')||(i===1&&v==='manager')));
+  if (v==='manager') { renderManagerGrid(); renderManagerLog(); renderImpact(); }
+}
+
+function renderRoster() {
+  document.getElementById('roster').innerHTML = ROSTER.map(a => {
+    const s = getMemberStatus(a);
+    return `<span class="alias-chip ${s}${cur===a?' selected':''}" onclick="selectAlias('${a}')">${a}</span>`;
+  }).join('');
+}
+
+function getMemberStatus(alias) {
+  const events  = allItems.filter(i => i.ALIAS === alias);
+  const lastIn  = events.find(i => i.EventType === 'punch-in');
+  const lastOut = events.find(i => i.EventType === 'punch-out');
+  const hasInt  = events.find(i => !['punch-in','punch-out'].includes(i.EventType) && !i.EndTime);
+  if (!lastIn)  return '';
+  if (lastOut)  return 'punched-out';
+  if (hasInt)   return 'away';
+  return 'punched-in';
+}
+
+function updateRosterChips() {
+  document.querySelectorAll('.alias-chip').forEach(chip => {
+    const a = chip.textContent.trim();
+    chip.className = `alias-chip ${getMemberStatus(a)}${cur===a?' selected':''}`;
+  });
+}
+
+function selectAlias(alias) {
+  cur = alias;
+  document.getElementById('activeAlias').textContent = alias;
+  document.getElementById('trackerPanel').style.display = 'block';
+  localEvents = allItems.filter(i => i.ALIAS === alias);
+  checkExistingSession(); renderLocalLog(); renderLocalMetrics(); renderRoster();
+}
+
+function checkExistingSession() {
+  const inEv  = allItems.find(i => i.ALIAS===cur && i.EventType==='punch-in');
+  const outEv = allItems.find(i => i.ALIAS===cur && i.EventType==='punch-out');
+  if (inEv && !outEv) { punchInTime=new Date(inEv.StartTime).getTime(); setStatus('On cell','green'); startLiveClock(); }
+  else if (outEv)     { setStatus('Punched out','red'); }
+  else                { setStatus('Not started',''); }
+}
+
+function setStatus(text, dot) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusDot').className = 'status-dot ' + dot;
+}
+
+async function punchIn() {
+  if (!cur) return;
+  if (punchInTime) { alert('Already punched in!'); return; }
+  punchInTime = Date.now();
+  setStatus('On cell','green'); startLiveClock();
+  const ok = await spPost({ alias:cur, EventType:'punch-in', StartTime:new Date().toISOString() });
+  setSyncStatus(ok?'ok':'err', ok?'Punch-in saved':'Failed to save — check connection');
+  await refreshData(); renderLocalLog();
+}
+
+async function punchOut() {
+  if (!cur||!punchInTime) return;
+  Object.keys(openInterrupts).forEach(k => endInterrupt(k));
+  punchInTime = null;
+  if (liveInterval) clearInterval(liveInterval);
+  document.getElementById('netTime').textContent = '—';
+  setStatus('Punched out','red');
+  const ok = await spPost({ alias:cur, EventType:'punch-out', StartTime:new Date().toISOString() });
+  setSyncStatus(ok?'ok':'err', ok?'Punch-out saved':'Failed to save');
+  await refreshData(); renderLocalLog(); renderLocalMetrics();
+}
+
+function startInterrupt(type) {
+  if (openInterrupts[type]) return;
+  if (!punchInTime) { alert('Punch in first!'); return; }
+  openInterrupts[type] = Date.now();
+  document.getElementById('ic_'+type).classList.add('open');
+  setStatus(LABELS[type],'amber');
+  interruptTimers[type] = setInterval(() => {
+    const el = document.getElementById('it_'+type);
+    if (el) el.textContent = fmtSec(Date.now()-openInterrupts[type]);
+  }, 1000);
+}
+
+async function endInterrupt(type) {
+  if (!openInterrupts[type]) return;
+  const startEpoch=openInterrupts[type], endEpoch=Date.now();
+  const durMin=Math.round((endEpoch-startEpoch)/60000);
+  const overPolicy=durMin>POLICY[type];
+  clearInterval(interruptTimers[type]);
+  delete openInterrupts[type]; delete interruptTimers[type];
+  document.getElementById('ic_'+type).classList.remove('open');
+  document.getElementById('it_'+type).textContent='0:00';
+  if (!Object.keys(openInterrupts).length) setStatus('On cell','green');
+  const ok = await spPost({ alias:cur, EventType:LABELS[type], StartTime:new Date(startEpoch).toISOString(), EndTime:new Date(endEpoch).toISOString(), DurationMin:durMin, PolicyFlag:overPolicy });
+  setSyncStatus(ok?'ok':'err', ok?`${LABELS[type]} saved (${durMin}m)${overPolicy?' — POLICY FLAG':''}`:'Failed to save');
+  await refreshData(); renderLocalLog(); renderLocalMetrics();
+}
+
+function startLiveClock() {
+  if (liveInterval) clearInterval(liveInterval);
+  liveInterval = setInterval(() => {
+    if (!punchInTime) return;
+    const openMs = Object.values(openInterrupts).reduce((a,s)=>a+(Date.now()-s),0);
+    const lostMs = allItems.filter(i=>i.ALIAS===cur&&i.DurationMin>0).reduce((a,i)=>a+(i.DurationMin*60000),0);
+    const net = Math.max(0, Date.now()-punchInTime-lostMs-openMs);
+    document.getElementById('netTime').textContent = fmtTime(net);
+    renderLocalMetrics();
+  }, 1000);
+}
+
+function renderLocalMetrics() {
+  if (!cur) return;
+  const myItems = allItems.filter(i=>i.ALIAS===cur);
+  const lostMs  = myItems.filter(i=>i.DurationMin>0).reduce((a,i)=>a+(i.DurationMin*60000),0);
+  const count   = myItems.filter(i=>!['punch-in','punch-out'].includes(i.EventType)).length;
+  const flags   = myItems.filter(i=>i.PolicyFlag).length;
+  const openMs  = Object.values(openInterrupts).reduce((a,s)=>a+(Date.now()-s),0);
+  const gross   = punchInTime ? Date.now()-punchInTime : 0;
+  const net     = Math.max(0, gross-lostMs-openMs);
+  document.getElementById('mNet').textContent   = gross>0 ? fmtTime(net) : '—';
+  document.getElementById('mLost').textContent  = lostMs>0 ? fmtMin(lostMs) : '—';
+  document.getElementById('mCount').textContent = count||'—';
+  document.getElementById('mFlags').textContent = flags||'—';
+}
+
+function renderLocalLog() {
+  const tbody=document.getElementById('logBody');
+  const myItems=[...allItems.filter(i=>i.ALIAS===cur)];
+  if (!myItems.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No events yet</td></tr>';return;}
+  tbody.innerHTML=myItems.map(i=>{
+    const st=i.StartTime?new Date(i.StartTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+    const et=i.EndTime?new Date(i.EndTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+    const flag=i.PolicyFlag?'<span class="policy-badge">POLICY</span>':'';
+    const dur=i.DurationMin>0?`<span class="mono">${i.DurationMin}m</span>`:'—';
+    return `<tr><td>${i.EventType}${flag}</td><td class="mono">${st}</td><td class="mono">${et}</td><td>${dur}</td><td>${i.PolicyFlag?'🚩':''}</td></tr>`;
+  }).join('');
+}
+
+function renderManagerGrid() {
+  document.getElementById('managerGrid').innerHTML = ROSTER.map(a => {
+    const items=allItems.filter(i=>i.ALIAS===a);
+    const lostMs=items.filter(i=>i.DurationMin>0).reduce((a,i)=>a+(i.DurationMin*60000),0);
+    const flags=items.filter(i=>i.PolicyFlag).length;
+    const inEv=items.find(i=>i.EventType==='punch-in');
+    const outEv=items.find(i=>i.EventType==='punch-out');
+    const interrupt=items.find(i=>!['punch-in','punch-out'].includes(i.EventType)&&!i.EndTime);
+    let statusText='Not started',dotCls='';
+    if (inEv&&!outEv&&!interrupt){statusText='On cell';dotCls='green';}
+    else if (interrupt){statusText=interrupt.EventType;dotCls='amber';}
+    else if (outEv){statusText='Punched out';dotCls='red';}
+    const gross=inEv&&!outEv?Date.now()-new Date(inEv.StartTime).getTime():0;
+    const net=Math.max(0,gross-lostMs);
+    return `<div class="member-card">
+      <div class="member-alias">${a}</div>
+      <div class="member-status"><span class="status-dot ${dotCls}"></span>${statusText}</div>
+      <div class="member-net">${gross>0?fmtTime(net):'—'}</div>
+      <div class="member-lost">${lostMs>0?fmtMin(lostMs)+' lost':''}</div>
+      ${flags>0?`<div class="member-flags">${flags} policy flag${flags>1?'s':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderManagerLog() {
+  const tbody=document.getElementById('managerLogBody');
+  if (!allItems.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No events today</td></tr>';return;}
+  tbody.innerHTML=[...allItems].slice(0,100).map(i=>{
+    const st=i.StartTime?new Date(i.StartTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+    const et=i.EndTime?new Date(i.EndTime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+    const flag=i.PolicyFlag?'<span class="policy-badge">POLICY</span>':'';
+    const dur=i.DurationMin>0?`<span class="mono">${i.DurationMin}m</span>`:'—';
+    return `<tr><td class="mono">${i.ALIAS}</td><td>${i.EventType}${flag}</td><td class="mono">${st}</td><td class="mono">${et}</td><td>${dur}</td><td>${i.PolicyFlag?'🚩':''}</td></tr>`;
+  }).join('');
+}
+
+function renderImpact() {
+  const totals={bathroom:0,car:0,lunch:0,break:0},counts={bathroom:0,car:0,lunch:0,break:0};
+  allItems.forEach(i=>{
+    const key=Object.keys(LABELS).find(k=>LABELS[k]===i.EventType);
+    if (key&&i.DurationMin>0){totals[key]+=i.DurationMin;counts[key]++;}
+  });
+  const grand=Object.values(totals).reduce((a,v)=>a+v,0);
+  const el=document.getElementById('impactRows');
+  if (!grand){el.innerHTML='<div class="empty">No interruption data yet</div>';return;}
+  const max=Math.max(...Object.values(totals));
+  el.innerHTML=Object.keys(totals).map(k=>{
+    const pct=max>0?Math.round((totals[k]/max)*100):0;
+    return `<div class="impact-row-item">
+      <span class="impact-label">${LABELS[k]}</span>
+      <div class="impact-bar-wrap"><div class="impact-bar" style="width:${pct}%;background:${COLORS[k]};"></div></div>
+      <span class="impact-val">${totals[k]}m · ${counts[k]}x</span>
+    </div>`;
+  }).join('');
+}
+
+setInterval(()=>{
+  document.getElementById('headerClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+renderRoster();
+initConnection();
+
+</script>
+</body>
+</html>
